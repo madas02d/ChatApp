@@ -107,4 +107,38 @@ router.delete('/:messageId', auth, catchAsync(async (req, res) => {
   res.json({ message: 'Message deleted successfully' });
 }));
 
+// Send message
+router.post('/', auth, catchAsync(async (req, res) => {
+  const { content, roomId } = req.body;
+  
+  const message = new Message({
+    content,
+    sender: req.user._id,
+    room: roomId
+  });
+
+  await message.save();
+
+  // Update room's lastMessage
+  await Room.findByIdAndUpdate(roomId, {
+    lastMessage: message._id
+  });
+
+  const populatedMessage = await Message.findById(message._id)
+    .populate('sender', 'username avatar');
+
+  res.status(201).json(populatedMessage);
+}));
+
+// Get messages for a room
+router.get('/room/:roomId', auth, catchAsync(async (req, res) => {
+  const { roomId } = req.params;
+  
+  const messages = await Message.find({ room: roomId })
+    .populate('sender', 'username avatar')
+    .sort({ createdAt: 1 });
+
+  res.json({ messages });
+}));
+
 export default router;

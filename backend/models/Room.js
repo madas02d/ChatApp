@@ -16,10 +16,13 @@ const roomSchema = new mongoose.Schema({
         ref: 'User',
         required: true
     },
-    participants: [{
+    members: [{
         type: mongoose.Schema.Types.ObjectId,
-        ref: 'User',
-        required: true
+        ref: 'User'
+    }],
+    activeUsers: [{
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User'
     }],
     isPrivate: {
         type: Boolean,
@@ -48,8 +51,8 @@ const roomSchema = new mongoose.Schema({
 
 // Method to add member to room
 roomSchema.methods.addMember = async function(userId) {
-    if (!this.participants.includes(userId)) {
-        this.participants.push(userId);
+    if (!this.members.includes(userId)) {
+        this.members.push(userId);
         this.lastActivity = new Date();
         await this.save();
     }
@@ -57,7 +60,7 @@ roomSchema.methods.addMember = async function(userId) {
 
 // Method to remove member from room
 roomSchema.methods.removeMember = async function(userId) {
-    this.participants = this.participants.filter(id => id.toString() !== userId.toString());
+    this.members = this.members.filter(id => id.toString() !== userId.toString());
     this.lastActivity = new Date();
     await this.save();
 };

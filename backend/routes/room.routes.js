@@ -19,12 +19,20 @@ router.get('/', auth, catchAsync(async (req, res) => {
         const rooms = await Room.find()
             .populate('createdBy', 'username avatar')
             .populate('members', 'username avatar status')
-            .sort({ lastActivity: -1 });
-
+            .populate('activeUsers', 'username avatar status')
+            .populate({
+                path: 'lastMessage',
+                populate: {
+                    path: 'sender',
+                    select: 'username avatar'
+                }
+            })
+            .sort({ updatedAt: -1 });
+        
         res.json({ rooms });
     } catch (error) {
         console.error('Error fetching rooms:', error);
-        throw new RoomError('Failed to fetch rooms');
+        res.status(500).json({ error: 'Failed to fetch rooms' });
     }
 }));
 
@@ -44,19 +52,23 @@ router.post('/', auth, catchAsync(async (req, res) => {
         }
 
         // Create new room
-        const room = await Room.create({
+        const room = new Room({
             name,
             description,
-            isPrivate: isPrivate || false,
-            createdBy: req.user.id,
-            members: [req.user.id] // Creator is automatically a member
+            createdBy: req.user._id,
+            members: [req.user._id],
+            activeUsers: [req.user._id],
+            isPrivate: isPrivate || false
         });
 
-        // Populate the room data
-        await room.populate('createdBy', 'username avatar');
-        await room.populate('members', 'username avatar status');
+        await room.save();
+        
+        const populatedRoom = await Room.findById(room._id)
+            .populate('createdBy', 'username avatar')
+            .populate('members', 'username avatar status')
+            .populate('activeUsers', 'username avatar status');
 
-        res.status(201).json({ room });
+        res.status(201).json({ room: populatedRoom });
     } catch (error) {
         console.error('Error creating room:', error);
         if (error instanceof ValidationError) {
@@ -74,8 +86,9 @@ router.get('/:roomId', auth, catchAsync(async (req, res) => {
         const room = await Room.findById(roomId)
             .populate('createdBy', 'username avatar')
             .populate('members', 'username avatar status')
+            .populate('activeUsers', 'username avatar status')
             .populate({
-                path: 'messages',
+                path: 'lastMessage',
                 populate: {
                     path: 'sender',
                     select: 'username avatar'
@@ -105,6 +118,7 @@ router.get('/:roomId', auth, catchAsync(async (req, res) => {
 router.post('/:roomId/join', auth, catchAsync(async (req, res) => {
     try {
         const { roomId } = req.params;
+        const userId = req.user._id;
 
         const room = await Room.findById(roomId);
         if (!room) {
@@ -117,21 +131,21 @@ router.post('/:roomId/join', auth, catchAsync(async (req, res) => {
         }
 
         // Check if user is already a member
-        if (room.members.includes(req.user.id)) {
-            throw new ValidationError('You are already a member of this room');
+        if (!room.members.includes(userId)) {
+            room.members.push(userId);
+        }
+        if (!room.activeUsers.includes(userId)) {
+            room.activeUsers.push(userId);
         }
 
-        // Add user to room
-        await room.addMember(req.user.id);
+        await room.save();
 
-        // Populate the room data
-        await room.populate('createdBy', 'username avatar');
-        await room.populate('members', 'username avatar status');
+        const updatedRoom = await Room.findById(roomId)
+            .populate('createdBy', 'username avatar')
+            .populate('members', 'username avatar status')
+            .populate('activeUsers', 'username avatar status');
 
-        res.json({ 
-            message: 'Joined room successfully',
-            room
-        });
+        res.json({ room: updatedRoom });
     } catch (error) {
         console.error('Error joining room:', error);
         if (error instanceof RoomNotFoundError || 
@@ -147,6 +161,7 @@ router.post('/:roomId/join', auth, catchAsync(async (req, res) => {
 router.post('/:roomId/leave', auth, catchAsync(async (req, res) => {
     try {
         const { roomId } = req.params;
+        const userId = req.user._id;
 
         const room = await Room.findById(roomId);
         if (!room) {
@@ -154,19 +169,24 @@ router.post('/:roomId/leave', auth, catchAsync(async (req, res) => {
         }
 
         // Check if user is a member
-        if (!room.members.includes(req.user.id)) {
+        if (!room.members.includes(userId)) {
             throw new ValidationError('You are not a member of this room');
         }
 
         // Don't allow creator to leave
-        if (room.createdBy.toString() === req.user.id) {
+        if (room.createdBy.toString() === userId.toString()) {
             throw new RoomAccessError('Room creator cannot leave the room');
         }
 
-        // Remove user from room
-        await room.removeMember(req.user.id);
+        room.activeUsers = room.activeUsers.filter(id => id.toString() !== userId.toString());
+        await room.save();
 
-        res.json({ message: 'Left room successfully' });
+        const updatedRoom = await Room.findById(roomId)
+            .populate('createdBy', 'username avatar')
+            .populate('members', 'username avatar status')
+            .populate('activeUsers', 'username avatar status');
+
+        res.json({ room: updatedRoom });
     } catch (error) {
         console.error('Error leaving room:', error);
         if (error instanceof RoomNotFoundError || 
