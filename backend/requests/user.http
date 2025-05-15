@@ -1,0 +1,21 @@
+### Variables
+@baseUrl = http://localhost:5000/api
+@authToken = your_jwt_token_here
+
+### Get User Profile
+GET {{baseUrl}}/users/profile
+Cookie: token={{authToken}}
+
+### Update User Profile
+PUT {{baseUrl}}/users/profile
+Content-Type: application/json
+Cookie: token={{authToken}}
+
+{
+    "username": "updateduser",
+    "email": "updated@example.com"
+}
+
+### Get User's Chat Rooms
+GET {{baseUrl}}/users/rooms
+Cookie: token={{authToken}} 

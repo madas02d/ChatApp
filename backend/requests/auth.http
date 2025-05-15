@@ -1,0 +1,26 @@
+### Variables
+@baseUrl = http://localhost:5000/api
+@authToken = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY4MjMyOTIzZjk4YmM1NTJjMjkwZjAzMCIsInVzZXJuYW1lIjoidGVzdHVzZXIxIiwiZW1haWwiOiJ0ZXN0MUBleGFtcGxlLmNvbSIsImlhdCI6MTc0NzEzNDc2MiwiZXhwIjoxNzQ3NzM5NTYyfQ.0vCqaLv7K-IRHngk4n92PZfqS-y9Op1iyCYnC6GOvow
+### Register User
+POST {{baseUrl}}/auth/register
+Content-Type: application/json
+
+{
+    "username": "testuser",
+    "email": "test@example.com",
+    "password": "password123"
+}
+
+### Login User
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+Cookie: token={{authToken}}
+
+{
+    "email": "test1@example.com",
+    "password": "password123"
+}
+
+### Logout User
+POST {{baseUrl}}/auth/logout
+Cookie: token={{authToken}} 

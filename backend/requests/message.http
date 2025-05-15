@@ -1,0 +1,48 @@
+### Variables
+@baseUrl = http://localhost:5000/api
+@authToken = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY4MjMyOTIzZjk4YmM1NTJjMjkwZjAzMCIsInVzZXJuYW1lIjoidGVzdHVzZXIxIiwiZW1haWwiOiJ0ZXN0MUBleGFtcGxlLmNvbSIsImlhdCI6MTc0NzMwNjU2OSwiZXhwIjoxNzQ3OTExMzY5fQ.rGbaocu5QgL6tg5oTZ8FjtRfnXqMnXNJiHCXCYQELNA
+@roomId = 68232989f98bc552c290f03a
+@messageId = 6825c950f0c716fa7ed48ec4
+@userId = 68232923f98bc552c290f030
+
+### Add user to room
+POST {{baseUrl}}/rooms/{{roomId}}/participants
+Authorization: Bearer {{authToken}}
+Content-Type: application/json
+
+{
+    "userId": "{{userId}}"
+}
+
+### Get room details
+GET {{baseUrl}}/rooms/{{roomId}}
+Authorization: Bearer {{authToken}}
+
+### Get messages for a room
+GET {{baseUrl}}/messages/{{roomId}}
+Authorization: Bearer {{authToken}}
+
+### Send a text message
+POST {{baseUrl}}/messages/{{roomId}}
+Authorization: Bearer {{authToken}}
+Content-Type: application/json
+
+{
+    "content": "Hello, this is a test message",
+    "messageType": "text"
+}
+
+### Send a message with file attachment
+POST {{baseUrl}}/messages/{{roomId}}
+Authorization: Bearer {{authToken}}
+Content-Type: application/json
+
+{
+    "content": "Check out this file",
+    "messageType": "file",
+    "fileUrl": "https://example.com/file.pdf"
+}
+
+### Delete a message
+DELETE {{baseUrl}}/messages/{{messageId}}
+Authorization: Bearer {{authToken}} 
