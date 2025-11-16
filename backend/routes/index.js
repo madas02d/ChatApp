@@ -3,6 +3,9 @@ import authRoutes from './auth.routes.js';
 import userRoutes from './user.routes.js';
 import roomRoutes from './room.routes.js';
 import messageRoutes from './message.routes.js';
+import conversationRoutes from './conversation.routes.js';
+import friendsRoutes from './friends.routes.js';
+import uploadRoutes from './upload.routes.js';
 
 const router = Router();
 
@@ -16,5 +19,8 @@ router.use('/auth', authRoutes);
 router.use('/users', userRoutes);
 router.use('/rooms', roomRoutes);
 router.use('/messages', messageRoutes);
+router.use('/conversations', conversationRoutes);
+router.use('/friends', friendsRoutes);
+router.use('/upload', uploadRoutes);
 
-export default router; 
+export default router;

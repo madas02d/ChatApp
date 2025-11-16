@@ -1,0 +1,180 @@
+import { Router } from 'express';
+import { auth } from '../middleware/auth.js';
+import User from '../models/User.js';
+import mongoose from 'mongoose';
+
+const router = Router();
+
+// Get all friends for current user
+router.get('/', auth, async (req, res) => {
+    try {
+        const user = await User.findById(req.user._id)
+            .populate('friends', 'username email photoURL status')
+            .populate('friendRequests', 'from', 'username email photoURL')
+            .populate('sentFriendRequests', 'to', 'username email photoURL');
+
+        res.json({
+            friends: user.friends || [],
+            friendRequests: user.friendRequests || [],
+            sentFriendRequests: user.sentFriendRequests || []
+        });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Send friend request
+router.post('/request', auth, async (req, res) => {
+    try {
+        const { userId } = req.body;
+
+        if (!userId) {
+            return res.status(400).json({ error: 'User ID is required' });
+        }
+
+        if (userId === req.user._id.toString()) {
+            return res.status(400).json({ error: 'Cannot send friend request to yourself' });
+        }
+
+        const targetUser = await User.findById(userId);
+        if (!targetUser) {
+            return res.status(404).json({ error: 'User not found' });
+        }
+
+        // Check if already friends
+        const currentUser = await User.findById(req.user._id);
+        if (currentUser.friends.includes(userId)) {
+            return res.status(400).json({ error: 'Already friends with this user' });
+        }
+
+        // Check if friend request already exists
+        if (currentUser.sentFriendRequests.some(req => req.to.toString() === userId)) {
+            return res.status(400).json({ error: 'Friend request already sent' });
+        }
+
+        // Check if target user already sent a request
+        if (targetUser.sentFriendRequests.some(req => req.to.toString() === req.user._id.toString())) {
+            return res.status(400).json({ error: 'This user already sent you a friend request' });
+        }
+
+        // Create friend request
+        const friendRequest = {
+            from: req.user._id,
+            to: userId,
+            status: 'pending',
+            createdAt: new Date()
+        };
+
+        // Add to both users
+        await User.findByIdAndUpdate(req.user._id, {
+            $push: { sentFriendRequests: friendRequest }
+        });
+
+        await User.findByIdAndUpdate(userId, {
+            $push: { friendRequests: friendRequest }
+        });
+
+        res.status(201).json({ message: 'Friend request sent successfully' });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Accept friend request
+router.post('/accept', auth, async (req, res) => {
+    try {
+        const { userId } = req.body;
+
+        if (!userId) {
+            return res.status(400).json({ error: 'User ID is required' });
+        }
+
+        const currentUser = await User.findById(req.user._id);
+        const friendRequest = currentUser.friendRequests.find(req => req.from.toString() === userId);
+
+        if (!friendRequest) {
+            return res.status(404).json({ error: 'Friend request not found' });
+        }
+
+        // Add to friends list for both users
+        await User.findByIdAndUpdate(req.user._id, {
+            $push: { friends: userId },
+            $pull: { friendRequests: { from: userId } }
+        });
+
+        await User.findByIdAndUpdate(userId, {
+            $push: { friends: req.user._id },
+            $pull: { sentFriendRequests: { to: req.user._id } }
+        });
+
+        res.json({ message: 'Friend request accepted successfully' });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Decline friend request
+router.post('/decline', auth, async (req, res) => {
+    try {
+        const { userId } = req.body;
+
+        if (!userId) {
+            return res.status(400).json({ error: 'User ID is required' });
+        }
+
+        // Remove friend request from both users
+        await User.findByIdAndUpdate(req.user._id, {
+            $pull: { friendRequests: { from: userId } }
+        });
+
+        await User.findByIdAndUpdate(userId, {
+            $pull: { sentFriendRequests: { to: req.user._id } }
+        });
+
+        res.json({ message: 'Friend request declined successfully' });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Remove friend
+router.delete('/:friendId', auth, async (req, res) => {
+    try {
+        const { friendId } = req.params;
+
+        // Remove from friends list for both users
+        await User.findByIdAndUpdate(req.user._id, {
+            $pull: { friends: friendId }
+        });
+
+        await User.findByIdAndUpdate(friendId, {
+            $pull: { friends: req.user._id }
+        });
+
+        res.json({ message: 'Friend removed successfully' });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Cancel sent friend request
+router.delete('/request/:userId', auth, async (req, res) => {
+    try {
+        const { userId } = req.params;
+
+        // Remove friend request from both users
+        await User.findByIdAndUpdate(req.user._id, {
+            $pull: { sentFriendRequests: { to: userId } }
+        });
+
+        await User.findByIdAndUpdate(userId, {
+            $pull: { friendRequests: { from: req.user._id } }
+        });
+
+        res.json({ message: 'Friend request cancelled successfully' });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+export default router; 

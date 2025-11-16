@@ -1,166 +1,198 @@
 import { Router } from 'express';
-import { loginLimiter } from '../middleware/rateLimiter.js';
-import { auth } from '../middleware/auth.js';
-import { 
-    hashPassword, 
-    comparePassword, 
-    generateToken, 
-    setTokenCookie, 
-    clearTokenCookie 
-} from '../utils/authUtils.js';
-import User from '../models/User.js';
-import { 
-    catchAsync, 
-    ValidationError, 
-    AuthenticationError 
-} from '../controllers/error.controller.js';
 import bcrypt from 'bcrypt';
+import jwt from 'jsonwebtoken';
+import User from '../models/User.js';
+import { auth, optionalAuth } from '../middleware/auth.js';
+
 const router = Router();
 
-// Register new user
-router.post('/register', catchAsync(async (req, res) => {
-    const { username, email, password } = req.body;
-    
-    // Validate input
-    if (!username || !email || !password) {
-        throw new ValidationError('Please provide all required fields');
-    }
+// Register
+router.post('/register', async (req, res) => {
+    try {
+        const { username, email, password } = req.body;
 
-    if (password.length < 6) {
-        throw new ValidationError('Password must be at least 6 characters long');
-    }
-
-    // Check if user already exists
-    const existingUser = await User.findOne({ 
-        $or: [{ email }, { username }] 
-    });
-
-    if (existingUser) {
-        throw new ValidationError('User with this email or username already exists');
-    }
-    
-    // Hash password
-    console.log('Hashing password for new user...');
-    const hashedPassword = await hashPassword(password);
-    console.log('Password hashed successfully');
-    
-    // Create new user
-    const user = await User.create({
-        username,
-        email,
-        password: hashedPassword
-    });
-
-    // Generate token and set cookie
-    const token = generateToken(user);
-    setTokenCookie(res, token);
-    
-    res.status(201).json({ 
-        message: 'User registered successfully',
-        user: { 
-            id: user._id,
-            username: user.username, 
-            email: user.email,
-            avatar: user.avatar
+        // Validate input
+        if (!username || !email || !password) {
+            return res.status(400).json({ error: 'All fields are required' });
         }
-    });
-}));
 
-// Login user
-router.post('/login', loginLimiter, catchAsync(async (req, res) => {
-    const { email, password } = req.body;
-    
-    // Validate input
-    if (!email || !password) {
-        console.log('Login attempt failed: Missing credentials');
-        throw new ValidationError('Please provide email and password');
-    }
-    
-    // Find user by email
-    const user = await User.findOne({ email });
-    console.log(user)
-    if (!user) {
-        console.log('Login failed: User not found');
-        throw new AuthenticationError('Invalid email or password');
-    }
-    
-    // Compare password using the User model's method
-    const isValidPassword = await bcrypt.compare(password, user.password);
-    
-    if (!isValidPassword) {
-        console.log('Login failed: Invalid password');
-        throw new AuthenticationError('Invalid email or password');
-    }
-    
-    // Update user status to online
-    user.status = 'online';
-    user.lastSeen = new Date();
-    await user.save();
-    
-    // Generate token
-    const token = generateToken(user);
-    
-    // Set cookie
-    setTokenCookie(res, token);
-    
-    console.log('Login successful:', { userId: user._id });
-    
-    // Send response
-    res.json({ 
-        message: 'Login successful',
-        user: { 
-            id: user._id,
-            username: user.username, 
-            email: user.email,
-            avatar: user.avatar,
-            status: user.status
+        if (password.length < 6) {
+            return res.status(400).json({ error: 'Password must be at least 6 characters long' });
         }
-    });
-}));
 
-// Logout user
-router.post('/logout', auth, catchAsync(async (req, res) => {
-    // Update user status to offline
-    await User.findByIdAndUpdate(req.user.id, {
-        status: 'offline',
-        lastSeen: new Date()
-    });
+        // Check if user already exists
+        const existingUser = await User.findOne({
+            $or: [{ email }, { username }]
+        });
 
-    clearTokenCookie(res);
+        if (existingUser) {
+            return res.status(400).json({ 
+                error: existingUser.email === email ? 'Email already registered' : 'Username already taken'
+            });
+        }
+
+        // Create user
+        const user = new User({
+            username,
+            email,
+            password
+        });
+
+        await user.save();
+
+        // Generate JWT token
+        const token = jwt.sign(
+            { 
+                id: user._id, 
+                username: user.username, 
+                email: user.email 
+            },
+            process.env.JWT_SECRET,
+            { expiresIn: '7d' }
+        );
+
+        // Set httpOnly cookie
+        res.cookie('token', token, {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === 'production',
+            sameSite: 'lax',
+            maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
+        });
+
+        res.status(201).json({
+            message: 'User registered successfully',
+            user: {
+                id: user._id,
+                username: user.username,
+                email: user.email,
+                status: user.status,
+                photoURL: user.photoURL,
+                displayName: user.displayName
+            }
+        });
+    } catch (error) {
+        console.error('Registration error:', error);
+        // Handle specific MongoDB errors
+        if (error.code === 11000) {
+            const field = Object.keys(error.keyPattern)[0];
+            return res.status(400).json({ 
+                error: `${field === 'email' ? 'Email' : 'Username'} already exists` 
+            });
+        }
+        // Handle validation errors
+        if (error.name === 'ValidationError') {
+            const messages = Object.values(error.errors).map(e => e.message);
+            return res.status(400).json({ error: messages.join(', ') });
+        }
+        res.status(500).json({ 
+            error: error.message || 'Registration failed. Please try again.' 
+        });
+    }
+});
+
+// Login
+router.post('/login', async (req, res) => {
+    try {
+        const { email, password } = req.body;
+
+        // Validate input
+        if (!email || !password) {
+            return res.status(400).json({ error: 'Email and password are required' });
+        }
+
+        // Find user
+        const user = await User.findOne({ email });
+        if (!user) {
+            return res.status(401).json({ error: 'Invalid credentials' });
+        }
+
+        // Check password
+        const isPasswordValid = await user.comparePassword(password);
+        if (!isPasswordValid) {
+            return res.status(401).json({ error: 'Invalid credentials' });
+        }
+
+        // Update user status to online
+        user.status = 'online';
+        user.lastSeen = new Date();
+        await user.save();
+
+        // Generate JWT token
+        const token = jwt.sign(
+            { 
+                id: user._id, 
+                username: user.username, 
+                email: user.email 
+            },
+            process.env.JWT_SECRET,
+            { expiresIn: '7d' }
+        );
+
+        // Set httpOnly cookie
+        res.cookie('token', token, {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === 'production',
+            sameSite: 'lax',
+            maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
+        });
+
+        res.json({
+            message: 'Login successful',
+            user: {
+                id: user._id,
+                username: user.username,
+                email: user.email,
+                status: user.status,
+                photoURL: user.photoURL,
+                displayName: user.displayName
+            }
+        });
+    } catch (error) {
+        console.error('Login error:', error);
+        res.status(500).json({ error: 'Login failed' });
+    }
+});
+
+// Logout
+router.post('/logout', (req, res) => {
+    res.clearCookie('token', {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax'
+    });
     res.json({ message: 'Logged out successfully' });
-}));
+});
 
-// Get current user
-router.get('/me', auth, catchAsync(async (req, res) => {
-    const user = await User.findById(req.user.id).select('-password');
-    if (!user) {
-        throw new AuthenticationError('User not found');
+// Get current user (returns null if not authenticated - no 401 error)
+router.get('/me', optionalAuth, (req, res) => {
+    if (req.user) {
+        res.json({
+            user: {
+                id: req.user._id,
+                username: req.user.username,
+                email: req.user.email,
+                status: req.user.status,
+                photoURL: req.user.photoURL,
+                displayName: req.user.displayName,
+                lastSeen: req.user.lastSeen
+            }
+        });
+    } else {
+        // Return 200 with null user instead of 401 - this prevents console errors
+        res.json({
+            user: null
+        });
     }
-    
-    res.json({ user });
-}));
+});
 
-// Reset password (temporary route for testing)
-router.post('/reset-password', catchAsync(async (req, res) => {
-    const { email, newPassword } = req.body;
-    
-    if (!email || !newPassword) {
-        throw new ValidationError('Please provide email and new password');
-    }
+// Clear all cookies (for debugging)
+router.post('/clear-cookies', (req, res) => {
+    res.clearCookie('token', {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax'
+    });
+    res.json({ message: 'All cookies cleared. Please log in again.' });
+});
 
-    const user = await User.findOne({ email });
-    if (!user) {
-        throw new ValidationError('User not found');
-    }
-
-    // Hash new password
-    const hashedPassword = await hashPassword(newPassword);
-    
-    // Update user's password
-    user.password = hashedPassword;
-    await user.save();
-
-    res.json({ message: 'Password reset successfully' });
-}));
-
-export default router; 
+export default router;

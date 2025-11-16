@@ -41,9 +41,14 @@ export const auth = async (req, res, next) => {
             });
 
             if (error instanceof jwt.TokenExpiredError) {
-                throw new AuthenticationError('Token expired');
+                throw new AuthenticationError('Token expired. Please log in again.');
             }
-            throw new AuthenticationError('Invalid token');
+            
+            if (error instanceof jwt.JsonWebTokenError) {
+                throw new AuthenticationError('Invalid token. Please log in again.');
+            }
+            
+            throw new AuthenticationError('Authentication failed. Please log in again.');
         }
 
         // Get user ID from token (using id field)
@@ -58,59 +63,19 @@ export const auth = async (req, res, next) => {
             throw new AuthenticationError('Invalid user ID format');
         }
 
-        // Find user
+        // Find user in database
         const user = await User.findById(userId).select('-password');
-
-        // Log user lookup result
-        console.log('User lookup:', {
-            userId,
-            userFound: !!user,
-            userStatus: user?.status,
-            userEmail: user?.email,
-            userUsername: user?.username
-        });
-
+        
         if (!user) {
-            console.log('Authentication failed: User not found', { 
-                userId,
-                token: token.substring(0, 10) + '...',
-                tokenIssuedAt: new Date(decoded.iat * 1000).toISOString(),
-                tokenExpiresAt: new Date(decoded.exp * 1000).toISOString()
-            });
-
-            // Clear the invalid token from cookies
-            if (req.cookies?.token) {
-                res.clearCookie('token', {
-                    httpOnly: true,
-                    secure: process.env.NODE_ENV === 'production',
-                    sameSite: 'strict'
-                });
-            }
-
-            throw new AuthenticationError('Session expired. Please log in again.');
+            console.log('Authentication failed: User not found', { userId });
+            throw new AuthenticationError('User not found');
         }
-
-        // Check if user is active
-        if (user.status === 'offline') {
-            console.log('Authentication failed: User is offline', { 
-                userId: user._id,
-                username: user.username,
-                lastSeen: user.lastSeen
-            });
-            throw new AuthenticationError('User account is inactive');
-        }
-
-        // Update user's last seen & status
-        await User.findByIdAndUpdate(user._id, {
-            lastSeen: new Date(),
-            status: 'online'
-        });
-        // Express auth middleware (simplified)
-        req.user = { id: decoded.id };
 
         // Attach user to request
         req.user = user;
-        console.log('Authentication successful:', { 
+        req.userId = userId;
+
+        console.log('Authentication successful:', {
             userId: user._id,
             username: user.username,
             email: user.email,
@@ -122,28 +87,57 @@ export const auth = async (req, res, next) => {
         console.error('Authentication error:', {
             name: error.name,
             message: error.message,
-            stack: error.stack,
             path: req.path,
             method: req.method
         });
 
-        // Clear token on authentication errors
+        // Clear invalid token cookie
         if (req.cookies?.token) {
             res.clearCookie('token', {
                 httpOnly: true,
                 secure: process.env.NODE_ENV === 'production',
-                sameSite: 'strict'
+                sameSite: 'lax'
             });
         }
 
         if (error instanceof AuthenticationError) {
-            next(error);
-        } else if (error instanceof jwt.JsonWebTokenError) {
-            next(new AuthenticationError('Invalid token'));
-        } else if (error instanceof jwt.TokenExpiredError) {
-            next(new AuthenticationError('Token expired'));
-        } else {
-            next(new AuthenticationError('Authentication failed'));
+            return res.status(401).json({ error: error.message });
         }
+
+        res.status(500).json({ error: 'Authentication failed' });
+    }
+};
+
+// Optional auth middleware (doesn't throw error if no token)
+export const optionalAuth = async (req, res, next) => {
+    try {
+        const token = req.cookies?.token || req.headers.authorization?.split(" ")[1];
+        
+        if (!token) {
+            return next();
+        }
+
+        const decoded = jwt.verify(token, process.env.JWT_SECRET);
+        const userId = decoded?.id;
+
+        if (userId && mongoose.Types.ObjectId.isValid(userId)) {
+            const user = await User.findById(userId).select('-password');
+            if (user) {
+                req.user = user;
+                req.userId = userId;
+            }
+        }
+
+        next();
+    } catch (error) {
+        // Clear invalid token cookie
+        if (req.cookies?.token) {
+            res.clearCookie('token', {
+                httpOnly: true,
+                secure: process.env.NODE_ENV === 'production',
+                sameSite: 'lax'
+            });
+        }
+        next();
     }
 };

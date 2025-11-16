@@ -9,7 +9,9 @@ const messageSchema = new mongoose.Schema({
     conversation: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'Conversation',
-        required: true
+        required: function() {
+            return !this.room; // Required if no room
+        }
     },
     content: {
         type: String,
@@ -18,10 +20,34 @@ const messageSchema = new mongoose.Schema({
     },
     messageType: {
         type: String,
-        enum: ['text', 'image', 'file'],
+        enum: ['text', 'image', 'audio', 'video', 'file'],
         default: 'text'
     },
     fileUrl: {
+        type: String,
+        default: null
+    },
+    fileName: {
+        type: String,
+        default: null
+    },
+    fileSize: {
+        type: Number,
+        default: null
+    },
+    fileMimeType: {
+        type: String,
+        default: null
+    },
+    thumbnailUrl: {
+        type: String,
+        default: null
+    },
+    isEncrypted: {
+        type: Boolean,
+        default: false
+    },
+    encryptedContent: {
         type: String,
         default: null
     },
@@ -62,7 +88,9 @@ const messageSchema = new mongoose.Schema({
     room: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'Room',
-        required: true
+        required: function() {
+            return !this.conversation; // Required if no conversation
+        }
     }
 }, {
     timestamps: true,
@@ -72,6 +100,7 @@ const messageSchema = new mongoose.Schema({
 
 // Index for faster querying of messages
 messageSchema.index({ conversation: 1, createdAt: -1 });
+messageSchema.index({ room: 1, createdAt: -1 });
 messageSchema.index({ sender: 1, createdAt: -1 });
 
 // Virtual for formatted timestamp
@@ -122,4 +151,4 @@ messageSchema.methods.removeReaction = async function(userId) {
 
 const Message = mongoose.model('Message', messageSchema);
 
-export default Message; 
+export default Message;
