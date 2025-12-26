@@ -32,12 +32,14 @@ const app = express();
 // Security middleware
 app.use(helmet()); // Adds various HTTP headers for security
 app.use(cookieParser()); // Parse cookies
-app.use(express.json()); // Parse JSON bodies
+app.use(express.json({ limit: '10mb' })); // Parse JSON bodies (increased limit for base64 images)
+app.use(express.urlencoded({ extended: true, limit: '10mb' })); // Parse URL-encoded bodies
 app.use(cors({
-    origin: 'http://localhost:5173', // Your frontend URL
+    origin: ['http://localhost:5173', 'http://localhost:3000'], // Frontend URLs (Vite dev server, etc.)
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'Accept']
+    allowedHeaders: ['Content-Type', 'Authorization', 'Accept'],
+    exposedHeaders: ['Content-Type']
 }));
 app.use(apiLimiter); // Apply rate limiting to all routes
 app.options('*', cors()); // Enable pre-flight for all routes

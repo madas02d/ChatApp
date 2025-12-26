@@ -115,6 +115,14 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  // Update user data (e.g., after profile update)
+  const updateUser = (userData) => {
+    setUser(prevUser => ({
+      ...prevUser,
+      ...userData
+    }));
+  };
+
   return (
     <AuthContext.Provider value={{
       user,
@@ -122,7 +130,8 @@ export const AuthProvider = ({ children }) => {
       login,
       logout,
       register,
-      checkAuth
+      checkAuth,
+      updateUser
     }}>
       {children}
     </AuthContext.Provider>

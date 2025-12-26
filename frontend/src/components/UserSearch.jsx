@@ -127,8 +127,8 @@ export const UserSearch = () => {
   };
 
   return (
-    <div className="bg-white shadow rounded-lg p-6">
-      <h2 className="text-xl font-bold text-gray-900 mb-4">Start a New Chat</h2>
+    <div className="bg-white shadow rounded-lg p-4 sm:p-6">
+      <h2 className="text-lg sm:text-xl font-bold text-gray-900 mb-4">Start a New Chat</h2>
       
       {/* Search Input */}
       <div className="relative mb-6">
@@ -166,46 +166,46 @@ export const UserSearch = () => {
                   return (
                     <div
                       key={user._id}
-                      className="flex items-center justify-between p-3 hover:bg-gray-50 rounded-lg"
+                      className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-3 hover:bg-gray-50 rounded-lg gap-3"
                     >
-                      <div className="flex items-center">
+                      <div className="flex items-center w-full sm:w-auto min-w-0 flex-1">
                         <img
                           src={user.photoURL || 'https://via.placeholder.com/40'}
                           alt={user.username}
-                          className="h-10 w-10 rounded-full"
+                          className="h-10 w-10 rounded-full flex-shrink-0"
                         />
-                        <div className="ml-3">
-                          <h4 className="font-medium text-gray-900">{user.username}</h4>
-                          <p className="text-sm text-gray-500">{user.email}</p>
+                        <div className="ml-3 min-w-0 flex-1">
+                          <h4 className="font-medium text-gray-900 truncate">{user.username}</h4>
+                          <p className="text-sm text-gray-500 truncate">{user.email}</p>
                         </div>
-                        <div className="ml-2">
+                        <div className="ml-2 flex-shrink-0">
                           <span className={`inline-block w-2 h-2 rounded-full ${
                             user.status === 'online' ? 'bg-green-500' : 'bg-gray-400'
                           }`}></span>
                         </div>
                       </div>
-                      <div className="flex space-x-2">
+                      <div className="flex gap-2 w-full sm:w-auto">
                         {relationship === 'friend' ? (
                           <>
                             <button
                               onClick={() => startConversation(user)}
-                              className="px-3 py-1 bg-green-500 text-white text-sm rounded hover:bg-green-600 transition-colors"
+                              className="flex-1 sm:flex-none px-3 py-1 bg-green-500 text-white text-sm rounded hover:bg-green-600 transition-colors"
                             >
                               Chat
                             </button>
                           </>
                         ) : relationship === 'request_received' ? (
-                          <span className="px-3 py-1 bg-yellow-100 text-yellow-800 text-sm rounded">
+                          <span className="flex-1 sm:flex-none px-3 py-1 bg-yellow-100 text-yellow-800 text-sm rounded text-center">
                             Request Received
                           </span>
                         ) : relationship === 'request_sent' ? (
-                          <span className="px-3 py-1 bg-blue-100 text-blue-800 text-sm rounded">
+                          <span className="flex-1 sm:flex-none px-3 py-1 bg-blue-100 text-blue-800 text-sm rounded text-center">
                             Request Sent
                           </span>
                         ) : (
                           <button
                             onClick={() => sendFriendRequest(user._id)}
-                            className="px-3 py-1 bg-blue-500 text-white text-sm rounded hover:bg-blue-600 transition-colors"
+                            className="flex-1 sm:flex-none px-3 py-1 bg-blue-500 text-white text-sm rounded hover:bg-blue-600 transition-colors"
                           >
                             Add Friend
                           </button>
@@ -240,29 +240,29 @@ export const UserSearch = () => {
             return (
               <div
                 key={conversation._id}
-                className="flex items-center p-3 hover:bg-gray-50 rounded-lg cursor-pointer transition-colors"
+                className="flex items-center p-3 hover:bg-gray-50 rounded-lg cursor-pointer transition-colors gap-3"
                 onClick={() => openConversation(conversation._id)}
               >
                 <img
                   src={otherParticipant?.photoURL || 'https://via.placeholder.com/40'}
                   alt={otherParticipant?.username}
-                  className="h-10 w-10 rounded-full"
+                  className="h-10 w-10 rounded-full flex-shrink-0"
                 />
-                <div className="ml-3 flex-1">
-                  <div className="flex justify-between items-center">
-                    <h4 className="font-medium text-gray-900">{otherParticipant?.username}</h4>
-                    <span className="text-sm text-gray-500">
+                <div className="ml-3 flex-1 min-w-0">
+                  <div className="flex justify-between items-center gap-2">
+                    <h4 className="font-medium text-gray-900 truncate text-sm sm:text-base">{otherParticipant?.username}</h4>
+                    <span className="text-xs sm:text-sm text-gray-500 flex-shrink-0">
                       {conversation.lastMessage
                         ? new Date(conversation.lastMessage.createdAt).toLocaleTimeString()
                         : 'No messages'}
                     </span>
                   </div>
-                  <p className="text-sm text-gray-500 truncate">
+                  <p className="text-xs sm:text-sm text-gray-500 truncate">
                     {conversation.lastMessage?.content || 'No messages yet'}
                   </p>
                 </div>
                 {unreadCount > 0 && (
-                  <span className="bg-green-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                  <span className="bg-green-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center flex-shrink-0">
                     {unreadCount}
                   </span>
                 )}

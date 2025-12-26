@@ -182,14 +182,14 @@ export const Friends = () => {
   }
 
   return (
-    <div className="bg-white shadow rounded-lg p-6">
-      <h2 className="text-xl font-bold text-gray-900 mb-4">Friends</h2>
+    <div className="bg-white shadow rounded-lg p-4 sm:p-6">
+      <h2 className="text-lg sm:text-xl font-bold text-gray-900 mb-4">Friends</h2>
       
       {/* Tabs */}
-      <div className="flex space-x-1 mb-6 bg-gray-100 p-1 rounded-lg">
+      <div className="flex flex-wrap sm:flex-nowrap gap-1 sm:gap-1 mb-6 bg-gray-100 p-1 rounded-lg">
         <button
           onClick={() => setActiveTab('friends')}
-          className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+          className={`flex-1 sm:flex-none px-3 sm:px-4 py-2 rounded-md text-xs sm:text-sm font-medium transition-colors ${
             activeTab === 'friends'
               ? 'bg-white text-gray-900 shadow-sm'
               : 'text-gray-500 hover:text-gray-700'
@@ -199,7 +199,7 @@ export const Friends = () => {
         </button>
         <button
           onClick={() => setActiveTab('requests')}
-          className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+          className={`flex-1 sm:flex-none px-3 sm:px-4 py-2 rounded-md text-xs sm:text-sm font-medium transition-colors ${
             activeTab === 'requests'
               ? 'bg-white text-gray-900 shadow-sm'
               : 'text-gray-500 hover:text-gray-700'
@@ -209,7 +209,7 @@ export const Friends = () => {
         </button>
         <button
           onClick={() => setActiveTab('sent')}
-          className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+          className={`flex-1 sm:flex-none px-3 sm:px-4 py-2 rounded-md text-xs sm:text-sm font-medium transition-colors ${
             activeTab === 'sent'
               ? 'bg-white text-gray-900 shadow-sm'
               : 'text-gray-500 hover:text-gray-700'
@@ -226,33 +226,33 @@ export const Friends = () => {
             <p className="text-gray-500 text-center py-8">No friends yet</p>
           ) : (
             friends.map((friend) => (
-              <div key={friend._id} className="flex items-center justify-between p-3 hover:bg-gray-50 rounded-lg">
-                <div className="flex items-center">
+              <div key={friend._id} className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-3 hover:bg-gray-50 rounded-lg gap-3">
+                <div className="flex items-center w-full sm:w-auto min-w-0">
                   <img
                     src={friend.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(friend.username || 'User')}&background=random&color=fff&size=40`}
                     alt={friend.username}
-                    className="h-10 w-10 rounded-full"
+                    className="h-10 w-10 rounded-full flex-shrink-0"
                     onError={(e) => {
                       e.target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(friend.username || 'User')}&background=random&color=fff&size=40`;
                     }}
                   />
-                  <div className="ml-3">
-                    <h4 className="font-medium text-gray-900">{friend.username}</h4>
+                  <div className="ml-3 min-w-0 flex-1">
+                    <h4 className="font-medium text-gray-900 truncate">{friend.username}</h4>
                     <p className="text-sm text-gray-500">
                       {friend.status === 'online' ? 'Online' : 'Offline'}
                     </p>
                   </div>
                 </div>
-                <div className="flex space-x-2">
+                <div className="flex gap-2 w-full sm:w-auto">
                   <button
                     onClick={() => startChat(friend._id)}
-                    className="px-3 py-1 bg-green-500 text-white text-sm rounded hover:bg-green-600 transition-colors"
+                    className="flex-1 sm:flex-none px-3 py-1 bg-green-500 text-white text-sm rounded hover:bg-green-600 transition-colors"
                   >
                     Chat
                   </button>
                   <button
                     onClick={() => removeFriend(friend._id)}
-                    className="px-3 py-1 bg-red-500 text-white text-sm rounded hover:bg-red-600 transition-colors"
+                    className="flex-1 sm:flex-none px-3 py-1 bg-red-500 text-white text-sm rounded hover:bg-red-600 transition-colors"
                   >
                     Remove
                   </button>

@@ -14,7 +14,8 @@ export const SignupForm = () => {
   const { login } = useAuth();
   const navigate = useNavigate();
 
-  const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+  // Use relative URL to leverage Vite proxy (avoids CORS issues)
+  const API_URL = '/api';
 
   const handleChange = (e) => {
     const { name, value } = e.target;

@@ -156,12 +156,16 @@ export const OnlineUsers = () => {
     return `https://ui-avatars.com/api/?name=${encodeURIComponent('User')}&background=random&color=fff&size=40`;
   };
 
+  // Filter and deduplicate users to avoid React key conflicts
   const filteredUsers = onlineUsers.filter(onlineUser => {
     const relationship = getUserRelationship(onlineUser._id);
     if (filter === 'friends') return relationship === 'friend';
     if (filter === 'strangers') return relationship === 'none';
     return true; // 'all'
-  });
+  }).filter((user, index, self) => 
+    // Remove duplicates based on _id
+    index === self.findIndex(u => u._id === user._id)
+  );
 
   if (loading) {
     return (
@@ -172,13 +176,13 @@ export const OnlineUsers = () => {
   }
 
   return (
-    <div className="bg-white shadow rounded-lg p-6">
-      <div className="flex items-center justify-between mb-6">
-        <h2 className="text-xl font-bold text-gray-900">Online Users</h2>
-        <div className="flex items-center space-x-4">
+    <div className="bg-white shadow rounded-lg p-4 sm:p-6">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-4 sm:mb-6 gap-3">
+        <h2 className="text-lg sm:text-xl font-bold text-gray-900">Online Users</h2>
+        <div className="flex items-center space-x-3 sm:space-x-4 w-full sm:w-auto">
           <div className="flex items-center space-x-2">
             <span className="inline-block w-2 h-2 bg-green-500 rounded-full"></span>
-            <span className="text-sm text-gray-500">{onlineUsers.length} online</span>
+            <span className="text-xs sm:text-sm text-gray-500">{onlineUsers.length} online</span>
           </div>
           <button
             onClick={fetchOnlineUsers}
@@ -193,10 +197,10 @@ export const OnlineUsers = () => {
       </div>
 
       {/* Filter buttons */}
-      <div className="flex space-x-2 mb-6">
+      <div className="flex flex-wrap gap-2 mb-6">
         <button
           onClick={() => setFilter('all')}
-          className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+          className={`px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg text-xs sm:text-sm font-medium transition-colors ${
             filter === 'all'
               ? 'bg-green-500 text-white'
               : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
@@ -206,7 +210,7 @@ export const OnlineUsers = () => {
         </button>
         <button
           onClick={() => setFilter('friends')}
-          className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+          className={`px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg text-xs sm:text-sm font-medium transition-colors ${
             filter === 'friends'
               ? 'bg-green-500 text-white'
               : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
@@ -216,13 +220,13 @@ export const OnlineUsers = () => {
         </button>
         <button
           onClick={() => setFilter('strangers')}
-          className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+          className={`px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg text-xs sm:text-sm font-medium transition-colors ${
             filter === 'strangers'
               ? 'bg-green-500 text-white'
               : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
           }`}
         >
-          New People ({onlineUsers.filter(u => getUserRelationship(u._id) === 'none').length})
+          New ({onlineUsers.filter(u => getUserRelationship(u._id) === 'none').length})
         </button>
       </div>
 
@@ -249,28 +253,28 @@ export const OnlineUsers = () => {
             return (
               <div
                 key={onlineUser._id}
-                className="flex items-center justify-between p-4 hover:bg-gray-50 rounded-lg border border-gray-100 transition-colors"
+                className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-3 sm:p-4 hover:bg-gray-50 rounded-lg border border-gray-100 transition-colors gap-3"
               >
-                <div className="flex items-center">
-                  <div className="relative">
+                <div className="flex items-center w-full sm:w-auto">
+                  <div className="relative flex-shrink-0">
                     <img
                       src={getAvatarUrl(onlineUser.photoURL)}
                       alt={onlineUser.username}
-                      className="h-12 w-12 rounded-full"
+                      className="h-10 w-10 sm:h-12 sm:w-12 rounded-full"
                     />
-                    <span className="absolute bottom-0 right-0 h-3 w-3 bg-green-500 rounded-full border-2 border-white"></span>
+                    <span className="absolute bottom-0 right-0 h-2.5 w-2.5 sm:h-3 sm:w-3 bg-green-500 rounded-full border-2 border-white"></span>
                   </div>
-                  <div className="ml-4">
-                    <h4 className="font-medium text-gray-900">{onlineUser.username}</h4>
-                    <p className="text-sm text-gray-500">
+                  <div className="ml-3 sm:ml-4 min-w-0 flex-1">
+                    <h4 className="font-medium text-gray-900 truncate">{onlineUser.username}</h4>
+                    <p className="text-xs sm:text-sm text-gray-500">
                       Last seen {getTimeAgo(onlineUser.lastSeen)}
                     </p>
                     {onlineUser.email && (
-                      <p className="text-xs text-gray-400">{onlineUser.email}</p>
+                      <p className="text-xs text-gray-400 truncate">{onlineUser.email}</p>
                     )}
                   </div>
                 </div>
-                <div className="flex space-x-2">
+                <div className="flex flex-wrap gap-2 w-full sm:w-auto sm:flex-nowrap">
                   {relationship === 'friend' ? (
                     <button
                       onClick={() => startConversation(onlineUser)}
@@ -297,21 +301,23 @@ export const OnlineUsers = () => {
                     <div className="flex space-x-2">
                       <button
                         onClick={() => sendFriendRequest(onlineUser._id)}
-                        className="px-4 py-2 bg-blue-500 text-white text-sm rounded-lg hover:bg-blue-600 transition-colors flex items-center space-x-2"
+                        className="flex-1 sm:flex-none px-3 sm:px-4 py-2 bg-blue-500 text-white text-xs sm:text-sm rounded-lg hover:bg-blue-600 transition-colors flex items-center justify-center space-x-1 sm:space-x-2"
                       >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <svg className="w-3 h-3 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
                         </svg>
-                        <span>Add Friend</span>
+                        <span className="hidden sm:inline">Add Friend</span>
+                        <span className="sm:hidden">Add</span>
                       </button>
                       <button
                         onClick={() => startConversation(onlineUser)}
-                        className="px-4 py-2 bg-gray-500 text-white text-sm rounded-lg hover:bg-gray-600 transition-colors flex items-center space-x-2"
+                        className="flex-1 sm:flex-none px-3 sm:px-4 py-2 bg-gray-500 text-white text-xs sm:text-sm rounded-lg hover:bg-gray-600 transition-colors flex items-center justify-center space-x-1 sm:space-x-2"
                       >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <svg className="w-3 h-3 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
                         </svg>
-                        <span>Quick Chat</span>
+                        <span className="hidden sm:inline">Quick Chat</span>
+                        <span className="sm:hidden">Chat</span>
                       </button>
                     </div>
                   )}

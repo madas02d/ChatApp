@@ -342,7 +342,7 @@ export const ConversationChat = () => {
         className={`flex ${isOwnMessage ? 'justify-end' : 'justify-start'} mb-4 px-4`}
       >
         <div
-          className={`max-w-xs lg:max-w-md px-4 py-3 rounded-lg shadow-sm ${
+          className={`max-w-[80%] sm:max-w-xs lg:max-w-md px-3 py-2 sm:px-4 sm:py-3 rounded-lg shadow-sm text-sm sm:text-base ${
             isOwnMessage
               ? 'bg-green-500 text-white rounded-tr-none'
               : 'bg-blue-500 text-white rounded-tl-none'
@@ -432,11 +432,11 @@ export const ConversationChat = () => {
     // Full-height chat layout so header and input stay visible
     <div className="flex flex-col max-w-6xl mx-auto bg-white h-[calc(100vh-6rem)] overflow-hidden mt-2 mb-2">
       {/* Header */}
-      <div className="flex items-center justify-between p-4 border-b border-gray-200">
-        <div className="flex items-center">
+      <div className="flex items-center justify-between p-2 sm:p-4 border-b border-gray-200">
+        <div className="flex items-center min-w-0 flex-1">
           <button
             onClick={() => navigate('/dashboard')}
-            className="mr-4 p-2 hover:bg-gray-100 rounded-lg"
+            className="mr-2 sm:mr-4 p-2 hover:bg-gray-100 rounded-lg flex-shrink-0"
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7" />
@@ -445,43 +445,44 @@ export const ConversationChat = () => {
           <img
             src={otherParticipant?.photoURL || 'https://via.placeholder.com/40'}
             alt={otherParticipant?.username}
-            className="h-10 w-10 rounded-full"
+            className="h-8 w-8 sm:h-10 sm:w-10 rounded-full flex-shrink-0"
           />
-          <div className="ml-3">
-            <h3 className="font-medium text-gray-900">{otherParticipant?.username}</h3>
-            <p className="text-sm text-gray-500">
+          <div className="ml-2 sm:ml-3 min-w-0">
+            <h3 className="font-medium text-gray-900 truncate text-sm sm:text-base">{otherParticipant?.username}</h3>
+            <p className="text-xs sm:text-sm text-gray-500">
               {otherParticipant?.status === 'online' ? 'Online' : 'Offline'}
             </p>
           </div>
         </div>
-        <div className="flex items-center">
+        <div className="flex items-center flex-shrink-0">
           {encryptionEnabled && (
-            <div className="flex items-center text-green-600 mr-4">
-              <svg className="w-5 h-5 mr-1" fill="currentColor" viewBox="0 0 20 20">
+            <div className="flex items-center text-green-600 mr-2 sm:mr-4">
+              <svg className="w-4 h-4 sm:w-5 sm:h-5 mr-1" fill="currentColor" viewBox="0 0 20 20">
                 <path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" />
               </svg>
-              <span className="text-sm font-medium">E2E Encrypted</span>
+              <span className="text-xs sm:text-sm font-medium hidden sm:inline">E2E Encrypted</span>
+              <span className="text-xs sm:text-sm font-medium sm:hidden">E2E</span>
             </div>
           )}
         </div>
       </div>
 
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto p-4">
+      <div className="flex-1 overflow-y-auto p-2 sm:p-4">
         {messages.map(renderMessage)}
         <div ref={messagesEndRef} />
       </div>
 
       {/* File Preview */}
       {filePreview && (
-        <div className="px-4 py-2 border-t border-gray-200 bg-gray-50">
+        <div className="px-2 sm:px-4 py-2 border-t border-gray-200 bg-gray-50">
           <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-2">
+            <div className="flex items-center space-x-2 min-w-0 flex-1">
               {filePreview.type === 'image' && filePreview.url && (
-                <img src={filePreview.url} alt="Preview" className="h-16 w-16 object-cover rounded" />
+                <img src={filePreview.url} alt="Preview" className="h-12 w-12 sm:h-16 sm:w-16 object-cover rounded flex-shrink-0" />
               )}
-              <div>
-                <p className="text-sm font-medium text-gray-900">
+              <div className="min-w-0 flex-1">
+                <p className="text-xs sm:text-sm font-medium text-gray-900 truncate">
                   {filePreview.fileName || 'File selected'}
                 </p>
                 {filePreview.fileSize && (
@@ -491,7 +492,7 @@ export const ConversationChat = () => {
             </div>
             <button
               onClick={removeSelectedFile}
-              className="text-red-500 hover:text-red-700"
+              className="text-red-500 hover:text-red-700 flex-shrink-0 ml-2"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
@@ -502,8 +503,8 @@ export const ConversationChat = () => {
       )}
 
       {/* Message Input */}
-      <form onSubmit={sendMessage} className="p-4 border-t border-gray-200">
-        <div className="flex space-x-2">
+      <form onSubmit={sendMessage} className="p-2 sm:p-4 border-t border-gray-200">
+        <div className="flex gap-2">
           <input
             ref={fileInputRef}
             type="file"
@@ -514,10 +515,10 @@ export const ConversationChat = () => {
           <button
             type="button"
             onClick={() => fileInputRef.current?.click()}
-            className="px-4 py-2 text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-lg transition-colors"
+            className="px-3 py-2 sm:px-4 text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-lg transition-colors flex-shrink-0"
             disabled={uploading}
           >
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
             </svg>
           </button>
@@ -525,14 +526,14 @@ export const ConversationChat = () => {
             type="text"
             value={newMessage}
             onChange={(e) => setNewMessage(e.target.value)}
-            placeholder={selectedFile ? "Add a caption (optional)..." : "Type a message..."}
-            className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+            placeholder={selectedFile ? "Add caption..." : "Type a message..."}
+            className="flex-1 px-3 py-2 sm:px-4 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent text-sm sm:text-base"
             disabled={uploading}
           />
           <button
             type="submit"
             disabled={(!newMessage.trim() && !selectedFile) || uploading}
-            className="px-6 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="px-4 sm:px-6 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm sm:text-base whitespace-nowrap"
           >
             {uploading ? 'Sending...' : 'Send'}
           </button>

@@ -3,6 +3,14 @@ import { auth } from '../middleware/auth.js';
 import multer from 'multer';
 import cloudinary from 'cloudinary';
 import { v2 as cloudinaryV2 } from 'cloudinary';
+import dotenv from 'dotenv';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+// Ensure .env is loaded (in case this module is loaded before server.js)
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+dotenv.config({ path: path.resolve(__dirname, '../.env') });
 
 const router = Router();
 
@@ -28,12 +36,50 @@ const upload = multer({
   }
 });
 
-// Configure Cloudinary
-cloudinaryV2.config({
-  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-  api_key: process.env.CLOUDINARY_API_KEY,
-  api_secret: process.env.CLOUDINARY_API_SECRET,
-});
+// Helper function to check if Cloudinary is properly configured
+const isCloudinaryConfigured = () => {
+  const cloudName = process.env.CLOUDINARY_CLOUD_NAME;
+  const apiKey = process.env.CLOUDINARY_API_KEY;
+  const apiSecret = process.env.CLOUDINARY_API_SECRET;
+  
+  // Debug logging (only log first time to avoid spam)
+  if (!isCloudinaryConfigured._logged) {
+    console.log('🔍 Checking Cloudinary configuration...');
+    console.log('   CLOUDINARY_CLOUD_NAME:', cloudName ? `${cloudName.substring(0, 4)}...` : 'NOT SET');
+    console.log('   CLOUDINARY_API_KEY:', apiKey ? `${apiKey.substring(0, 4)}...` : 'NOT SET');
+    console.log('   CLOUDINARY_API_SECRET:', apiSecret ? 'SET (hidden)' : 'NOT SET');
+    isCloudinaryConfigured._logged = true;
+  }
+  
+  return !!(
+    cloudName &&
+    apiKey &&
+    apiSecret &&
+    typeof cloudName === 'string' &&
+    typeof apiKey === 'string' &&
+    typeof apiSecret === 'string' &&
+    cloudName.trim() !== '' &&
+    apiKey.trim() !== '' &&
+    apiSecret.trim() !== ''
+  );
+};
+
+// Configure Cloudinary only if all required env vars are present
+if (isCloudinaryConfigured()) {
+  try {
+    cloudinaryV2.config({
+      cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+      api_key: process.env.CLOUDINARY_API_KEY,
+      api_secret: process.env.CLOUDINARY_API_SECRET,
+    });
+    console.log('✅ Cloudinary configured successfully');
+  } catch (error) {
+    console.error('❌ Error configuring Cloudinary:', error.message);
+  }
+} else {
+  console.warn('⚠️  Cloudinary not configured - file uploads will use base64 fallback');
+  console.warn('   Make sure CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, and CLOUDINARY_API_SECRET are set in your .env file');
+}
 
 // Upload file (image, audio, or video) to Cloudinary
 router.post('/file', auth, upload.single('file'), async (req, res) => {
@@ -43,11 +89,11 @@ router.post('/file', auth, upload.single('file'), async (req, res) => {
     }
 
     // Check if Cloudinary is configured
-    if (!process.env.CLOUDINARY_CLOUD_NAME || 
-        !process.env.CLOUDINARY_API_KEY || 
-        !process.env.CLOUDINARY_API_SECRET) {
-      return res.status(500).json({ 
-        error: 'Cloudinary not configured. Please set CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, and CLOUDINARY_API_SECRET environment variables.' 
+    if (!isCloudinaryConfigured()) {
+      console.warn('Cloudinary not configured - returning error before upload attempt');
+      return res.status(503).json({ 
+        error: 'File upload service not configured. Please contact administrator.',
+        requiresCloudinary: true
       });
     }
 
@@ -111,11 +157,11 @@ router.post('/image', auth, upload.single('image'), async (req, res) => {
     }
 
     // Check if Cloudinary is configured
-    if (!process.env.CLOUDINARY_CLOUD_NAME || 
-        !process.env.CLOUDINARY_API_KEY || 
-        !process.env.CLOUDINARY_API_SECRET) {
-      return res.status(500).json({ 
-        error: 'Cloudinary not configured. Please set CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, and CLOUDINARY_API_SECRET environment variables.' 
+    if (!isCloudinaryConfigured()) {
+      console.warn('Cloudinary not configured - returning error before upload attempt');
+      return res.status(503).json({ 
+        error: 'Image upload service not configured. Please contact administrator or use base64 fallback.',
+        requiresCloudinary: true
       });
     }
 
@@ -123,14 +169,16 @@ router.post('/image', auth, upload.single('image'), async (req, res) => {
     const base64String = req.file.buffer.toString('base64');
     const dataURI = `data:${req.file.mimetype};base64,${base64String}`;
 
-    // Upload to Cloudinary
+    // Upload to Cloudinary with simplified transformation format
     const result = await cloudinaryV2.uploader.upload(dataURI, {
       folder: 'chat-app-avatars',
       public_id: `user-${req.user._id}-${Date.now()}`,
-      transformation: [
-        { width: 300, height: 300, crop: 'fill', gravity: 'face' },
-        { quality: 'auto', fetch_format: 'auto' }
-      ]
+      width: 300,
+      height: 300,
+      crop: 'fill',
+      gravity: 'face',
+      quality: 'auto',
+      fetch_format: 'auto'
     });
 
     res.json({
@@ -141,6 +189,21 @@ router.post('/image', auth, upload.single('image'), async (req, res) => {
 
   } catch (error) {
     console.error('Cloudinary upload error:', error);
+    console.error('Error details:', {
+      message: error.message,
+      name: error.name,
+      stack: error.stack?.split('\n').slice(0, 3).join('\n')
+    });
+    
+    // Check if it's a configuration error
+    if (error.message.includes('api_key') || error.message.includes('Must supply')) {
+      return res.status(503).json({ 
+        error: 'Cloudinary configuration error. Please check your .env file has CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, and CLOUDINARY_API_SECRET set correctly.',
+        requiresCloudinary: true,
+        details: 'Configuration issue detected'
+      });
+    }
+    
     res.status(500).json({ 
       error: 'Failed to upload image: ' + error.message 
     });
@@ -153,10 +216,8 @@ router.delete('/file/:publicId', auth, async (req, res) => {
     const { publicId } = req.params;
     const { resourceType = 'image' } = req.query; // image, video, or raw
 
-    if (!process.env.CLOUDINARY_CLOUD_NAME || 
-        !process.env.CLOUDINARY_API_KEY || 
-        !process.env.CLOUDINARY_API_SECRET) {
-      return res.status(500).json({ 
+    if (!isCloudinaryConfigured()) {
+      return res.status(503).json({ 
         error: 'Cloudinary not configured' 
       });
     }
@@ -183,10 +244,8 @@ router.delete('/image/:publicId', auth, async (req, res) => {
   try {
     const { publicId } = req.params;
 
-    if (!process.env.CLOUDINARY_CLOUD_NAME || 
-        !process.env.CLOUDINARY_API_KEY || 
-        !process.env.CLOUDINARY_API_SECRET) {
-      return res.status(500).json({ 
+    if (!isCloudinaryConfigured()) {
+      return res.status(503).json({ 
         error: 'Cloudinary not configured' 
       });
     }

@@ -87,3 +87,6 @@ Updated to handle the new response format gracefully:
 The `optionalAuth` middleware was already in the codebase - we just needed to use it! This is a better pattern for endpoints that should work both with and without authentication.
 
 
+
+
+
