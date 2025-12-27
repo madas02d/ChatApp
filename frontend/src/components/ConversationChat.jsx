@@ -17,6 +17,7 @@ import {
   createImagePreview,
   createVideoPreview 
 } from '../utils/fileHandler';
+import { ImageViewer } from './ImageViewer';
 
 export const ConversationChat = () => {
   const { conversationId } = useParams();
@@ -31,6 +32,7 @@ export const ConversationChat = () => {
   const [uploading, setUploading] = useState(false);
   const [selectedFile, setSelectedFile] = useState(null);
   const [filePreview, setFilePreview] = useState(null);
+  const [viewingImage, setViewingImage] = useState(null);
   const messagesEndRef = useRef(null);
   const fileInputRef = useRef(null);
 
@@ -130,8 +132,8 @@ export const ConversationChat = () => {
                 return { ...message, decryptedContent: decrypted, content: decrypted };
               } catch (error) {
                 // Decryption failed - could be wrong key, corrupted data, or different encryption
-                console.warn('Decryption failed for message:', message._id, error);
-                // Show original content if available, otherwise show error message
+                // This is expected behavior for messages encrypted with different keys or old messages
+                // Silently handle and show fallback content
                 return { 
                   ...message, 
                   decryptedContent: message.content || '[Unable to decrypt - key mismatch or corrupted]',
@@ -216,8 +218,28 @@ export const ConversationChat = () => {
           }
         } catch (error) {
           console.error('File upload error:', error);
-          alert('Failed to upload file: ' + error.message);
+          // Provide more helpful error messages
+          let errorMessage = 'Failed to upload file';
+          const errorMsg = error.message || '';
+          if (errorMsg.includes('503') || errorMsg.includes('not configured') || errorMsg.includes('authentication failed') || errorMsg.includes('Invalid api_key')) {
+            errorMessage = 'File upload service is not properly configured. Please check Cloudinary credentials in backend configuration.';
+          } else if (errorMsg.includes('size') || errorMsg.includes('too large')) {
+            errorMessage = 'File is too large. Maximum size is 100MB.';
+          } else if (errorMsg.includes('type') || errorMsg.includes('not allowed')) {
+            errorMessage = 'File type is not supported. Please choose an image, audio, or video file.';
+          } else if (errorMsg.includes('401') || errorMsg.includes('Unauthorized')) {
+            errorMessage = 'You must be logged in to upload files. Please refresh the page.';
+          } else {
+            errorMessage = errorMsg || 'Failed to upload file. Please try again.';
+          }
+          alert(errorMessage);
           setUploading(false);
+          // Clear file selection on error
+          setSelectedFile(null);
+          setFilePreview(null);
+          if (fileInputRef.current) {
+            fileInputRef.current.value = '';
+          }
           return;
         }
       }
@@ -354,7 +376,9 @@ export const ConversationChat = () => {
               <img
                 src={message.fileUrl}
                 alt={message.fileName || 'Image'}
-                className="max-w-full h-auto rounded mb-2"
+                className="max-w-full h-auto rounded mb-2 cursor-pointer hover:opacity-90 transition-opacity"
+                onClick={() => setViewingImage({ url: message.fileUrl, fileName: message.fileName })}
+                title="Click to view full size"
               />
               {displayContent && displayContent !== message.fileName && (
                 <p className="text-sm mt-2">{displayContent}</p>
@@ -378,11 +402,39 @@ export const ConversationChat = () => {
                 <p className="text-sm mt-2">{displayContent}</p>
               )}
             </div>
+          ) : message.fileUrl && message.fileName ? (
+            // Document or other file type
+            <div>
+              <button
+                onClick={() => {
+                  // Open document in new tab
+                  const link = document.createElement('a');
+                  link.href = message.fileUrl;
+                  link.target = '_blank';
+                  link.rel = 'noopener noreferrer';
+                  document.body.appendChild(link);
+                  link.click();
+                  document.body.removeChild(link);
+                }}
+                className={`flex items-center gap-2 text-sm underline hover:no-underline transition-colors ${
+                  isOwnMessage ? 'text-white hover:text-gray-100' : 'text-white hover:text-gray-100'
+                }`}
+                title="Click to open/download document"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+                <span>{message.fileName}</span>
+              </button>
+              {displayContent && displayContent !== message.fileName && (
+                <p className="text-sm mt-2">{displayContent}</p>
+              )}
+            </div>
           ) : (
             <p className="text-sm">{displayContent || '[Empty message]'}</p>
           )}
 
-          {/* File info */}
+          {/* File info - show for images and as metadata for other files */}
           {message.fileName && (
             <p className={`text-xs mt-1 ${isOwnMessage ? 'text-green-100' : 'text-blue-100'}`}>
               {message.fileName}
@@ -539,6 +591,15 @@ export const ConversationChat = () => {
           </button>
         </div>
       </form>
+
+      {/* Image Viewer Modal */}
+      {viewingImage && (
+        <ImageViewer
+          imageUrl={viewingImage.url}
+          fileName={viewingImage.fileName}
+          onClose={() => setViewingImage(null)}
+        />
+      )}
     </div>
   );
 };

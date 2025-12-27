@@ -183,16 +183,26 @@ export async function uploadFile(file, apiEndpoint, onProgress) {
       if (xhr.status >= 200 && xhr.status < 300) {
         try {
           const response = JSON.parse(xhr.responseText);
-          resolve(response);
+          // Ensure we return the expected format
+          resolve({
+            url: response.url || response.imageUrl || response.secure_url,
+            publicId: response.publicId,
+            fileName: response.fileName || response.originalname,
+            fileSize: response.fileSize || response.size,
+            mimeType: response.mimeType || response.mimetype || response.type,
+            thumbnailUrl: response.thumbnailUrl || response.eager?.[0]?.secure_url
+          });
         } catch (error) {
           reject(new Error('Invalid response from server'));
         }
       } else {
         try {
-          const error = JSON.parse(xhr.responseText);
-          reject(new Error(error.error || 'Upload failed'));
+          const errorData = JSON.parse(xhr.responseText);
+          // Include status code in error message for better debugging
+          const errorMessage = errorData.error || errorData.message || 'Upload failed';
+          reject(new Error(`${errorMessage} (Status: ${xhr.status})`));
         } catch {
-          reject(new Error('Upload failed'));
+          reject(new Error(`Upload failed (Status: ${xhr.status})`));
         }
       }
     });

@@ -143,6 +143,27 @@ router.post('/file', auth, upload.single('file'), async (req, res) => {
 
   } catch (error) {
     console.error('Cloudinary upload error:', error);
+    console.error('Error details:', {
+      message: error.message,
+      name: error.name,
+      http_code: error.http_code
+    });
+    
+    // Check if it's an authentication/configuration error
+    if (error.message && (
+      error.message.includes('Invalid api_key') || 
+      error.message.includes('api_key') || 
+      error.message.includes('Must supply') ||
+      error.http_code === 401 ||
+      error.http_code === 400
+    )) {
+      return res.status(503).json({ 
+        error: 'Cloudinary authentication failed. Please check your Cloudinary API credentials in the backend .env file (CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, CLOUDINARY_API_SECRET).',
+        requiresCloudinary: true,
+        details: 'Cloudinary API authentication error - invalid credentials'
+      });
+    }
+    
     res.status(500).json({ 
       error: 'Failed to upload file: ' + error.message 
     });

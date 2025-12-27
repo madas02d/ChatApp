@@ -145,7 +145,8 @@ export async function decryptText(encryptedText, key) {
     const decoder = new TextDecoder();
     return decoder.decode(decryptedData);
   } catch (error) {
-    console.error('Decryption error:', error);
+    // Don't log expected decryption errors (wrong key, corrupted data, etc.)
+    // These are handled gracefully by the calling component
     throw new Error('Failed to decrypt message');
   }
 }

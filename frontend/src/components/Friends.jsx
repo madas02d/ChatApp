@@ -1,10 +1,12 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
+import { useCallManager } from '../hooks/useCallManager';
 
 export const Friends = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const { startCall } = useCallManager();
   const [friends, setFriends] = useState([]);
   const [friendRequests, setFriendRequests] = useState([]);
   const [sentRequests, setSentRequests] = useState([]);
@@ -247,12 +249,28 @@ export const Friends = () => {
                   <button
                     onClick={() => startChat(friend._id)}
                     className="flex-1 sm:flex-none px-3 py-1 bg-green-500 text-white text-sm rounded hover:bg-green-600 transition-colors"
+                    title="Start chat"
                   >
                     Chat
                   </button>
                   <button
+                    onClick={() => startCall(friend._id, 'video')}
+                    className="flex-1 sm:flex-none px-3 py-1 bg-blue-500 text-white text-sm rounded hover:bg-blue-600 transition-colors"
+                    title="Video call"
+                  >
+                    📹
+                  </button>
+                  <button
+                    onClick={() => startCall(friend._id, 'audio')}
+                    className="flex-1 sm:flex-none px-3 py-1 bg-purple-500 text-white text-sm rounded hover:bg-purple-600 transition-colors"
+                    title="Audio call"
+                  >
+                    📞
+                  </button>
+                  <button
                     onClick={() => removeFriend(friend._id)}
                     className="flex-1 sm:flex-none px-3 py-1 bg-red-500 text-white text-sm rounded hover:bg-red-600 transition-colors"
+                    title="Remove friend"
                   >
                     Remove
                   </button>

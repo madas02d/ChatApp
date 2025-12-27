@@ -6,6 +6,7 @@ import messageRoutes from './message.routes.js';
 import conversationRoutes from './conversation.routes.js';
 import friendsRoutes from './friends.routes.js';
 import uploadRoutes from './upload.routes.js';
+import callRoutes from './call.routes.js';
 
 const router = Router();
 
@@ -22,5 +23,6 @@ router.use('/messages', messageRoutes);
 router.use('/conversations', conversationRoutes);
 router.use('/friends', friendsRoutes);
 router.use('/upload', uploadRoutes);
+router.use('/calls', callRoutes);
 
 export default router;

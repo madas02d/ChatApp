@@ -1,6 +1,7 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 import { ChatProvider } from './context/ChatContext';
+import { CallProvider } from './context/CallContext';
 import { LoginForm } from './components/LoginForm';
 import { SignupForm } from './components/SignupForm';
 import { Dashboard } from './components/Dashboard';
@@ -24,8 +25,9 @@ function App() {
   return (
     <Router>
       <AuthProvider>
-        <ChatProvider>
-          <div className="min-h-screen bg-gray-100">
+        <CallProvider>
+          <ChatProvider>
+            <div className="min-h-screen bg-gray-100">
             <Routes>
               <Route path="/login" element={<LoginForm />} />
               <Route path="/signup" element={<SignupForm />} />
@@ -61,7 +63,8 @@ function App() {
               />
             </Routes>
           </div>
-        </ChatProvider>
+          </ChatProvider>
+        </CallProvider>
       </AuthProvider>
     </Router>
   );

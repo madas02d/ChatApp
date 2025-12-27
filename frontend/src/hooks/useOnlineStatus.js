@@ -10,14 +10,21 @@ export const useOnlineStatus = () => {
     if (!user) return;
     
     try {
-      await fetch('/api/users/status', {
+      const response = await fetch('/api/users/status', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
         body: JSON.stringify({ status: 'online' })
       });
+      // Only log errors if not 401 (unauthorized is expected if user is not logged in)
+      if (!response.ok && response.status !== 401) {
+        console.warn('Failed to set online status:', response.status);
+      }
     } catch (error) {
-      console.error('Error setting online status:', error);
+      // Silently ignore network errors
+      if (error.name !== 'TypeError') {
+        console.error('Error setting online status:', error);
+      }
     }
   }, [user]);
 
@@ -26,14 +33,21 @@ export const useOnlineStatus = () => {
     if (!user) return;
     
     try {
-      await fetch('/api/users/status', {
+      const response = await fetch('/api/users/status', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
         body: JSON.stringify({ status: 'offline' })
       });
+      // Only log errors if not 401 (unauthorized is expected if user is not logged in)
+      if (!response.ok && response.status !== 401) {
+        console.warn('Failed to set offline status:', response.status);
+      }
     } catch (error) {
-      console.error('Error setting offline status:', error);
+      // Silently ignore network errors
+      if (error.name !== 'TypeError') {
+        console.error('Error setting offline status:', error);
+      }
     }
   }, [user]);
 
@@ -42,12 +56,19 @@ export const useOnlineStatus = () => {
     if (!user) return;
     
     try {
-      await fetch('/api/users/heartbeat', {
+      const response = await fetch('/api/users/heartbeat', {
         method: 'POST',
         credentials: 'include'
       });
+      // Only log errors if not 401 (unauthorized is expected if user is not logged in)
+      if (!response.ok && response.status !== 401) {
+        console.warn('Failed to send heartbeat:', response.status);
+      }
     } catch (error) {
-      console.error('Error sending heartbeat:', error);
+      // Silently ignore network errors
+      if (error.name !== 'TypeError') {
+        console.error('Error sending heartbeat:', error);
+      }
     }
   }, [user]);
 
@@ -60,28 +81,24 @@ export const useOnlineStatus = () => {
     // Send heartbeat every 30 seconds to keep user online
     const heartbeatInterval = setInterval(sendHeartbeat, 30000);
 
-    // Set offline when user closes tab or navigates away
-    const handleBeforeUnload = () => {
-      setOffline();
-    };
-
-    // Set offline when page becomes hidden (mobile)
+    // Handle visibility change (tab switch, minimize, etc.) - but NOT page refresh
     const handleVisibilityChange = () => {
       if (document.hidden) {
-        setOffline();
+        // Page is hidden (minimized, switched tab, etc.)
+        // Don't set offline immediately - wait to see if it's a refresh
+        // We'll rely on heartbeat timeout instead
       } else {
+        // Page is visible again - user came back
         setOnline();
       }
     };
 
-    window.addEventListener('beforeunload', handleBeforeUnload);
     document.addEventListener('visibilitychange', handleVisibilityChange);
 
     return () => {
       clearInterval(heartbeatInterval);
-      window.removeEventListener('beforeunload', handleBeforeUnload);
       document.removeEventListener('visibilitychange', handleVisibilityChange);
-      setOffline();
+      // Don't set offline on cleanup - user might be refreshing
     };
   }, [user, setOnline, setOffline, sendHeartbeat]);
 

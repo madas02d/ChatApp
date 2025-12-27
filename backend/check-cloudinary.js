@@ -45,21 +45,7 @@ checks.forEach(check => {
   }
 });
 
-console.log('');
 
-if (allPresent) {
-  console.log('✅ All Cloudinary environment variables are set correctly!');
-  console.log('   Your profile picture uploads should work with Cloudinary.\n');
-} else {
-  console.log('❌ Some Cloudinary environment variables are missing or empty.');
-  console.log('\n📝 To fix this:');
-  console.log('   1. Make sure you have a .env file in the backend directory');
-  console.log('   2. Add these lines to your .env file:');
-  console.log('      CLOUDINARY_CLOUD_NAME=your_cloud_name');
-  console.log('      CLOUDINARY_API_KEY=your_api_key');
-  console.log('      CLOUDINARY_API_SECRET=your_api_secret');
-  console.log('   3. Get these values from: https://console.cloudinary.com/');
-  console.log('   4. Restart your backend server after updating .env\n');
-}
+
 
 

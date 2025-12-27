@@ -202,4 +202,22 @@ router.get('/rooms', auth, async (req, res) => {
     }
 });
 
+// Get user by ID
+router.get('/:userId', auth, async (req, res) => {
+    try {
+        const { userId } = req.params;
+        
+        const user = await User.findById(userId)
+            .select('username email photoURL status lastSeen displayName');
+        
+        if (!user) {
+            return res.status(404).json({ error: 'User not found' });
+        }
+
+        res.json({ user });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
 export default router;
