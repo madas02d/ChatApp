@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { useCallManager } from '../hooks/useCallManager';
 import { 
   encryptText, 
   decryptText, 
@@ -23,6 +24,7 @@ export const ConversationChat = () => {
   const { conversationId } = useParams();
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { startCall } = useCallManager();
   const [conversation, setConversation] = useState(null);
   const [messages, setMessages] = useState([]);
   const [newMessage, setNewMessage] = useState('');
@@ -506,7 +508,33 @@ export const ConversationChat = () => {
             </p>
           </div>
         </div>
-        <div className="flex items-center flex-shrink-0">
+        <div className="flex items-center flex-shrink-0 gap-2">
+          {/* Call buttons */}
+          {otherParticipant && (
+            <>
+              <button
+                onClick={() => startCall(otherParticipant._id, 'video')}
+                className="p-2 hover:bg-gray-100 rounded-lg transition-colors flex items-center justify-center"
+                title="Video call"
+                aria-label="Start video call"
+              >
+                <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                </svg>
+              </button>
+              <button
+                onClick={() => startCall(otherParticipant._id, 'audio')}
+                className="p-2 hover:bg-gray-100 rounded-lg transition-colors flex items-center justify-center"
+                title="Audio call"
+                aria-label="Start audio call"
+              >
+                <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+                </svg>
+              </button>
+            </>
+          )}
+          {/* E2E Encrypted indicator */}
           {encryptionEnabled && (
             <div className="flex items-center text-green-600 mr-2 sm:mr-4">
               <svg className="w-4 h-4 sm:w-5 sm:h-5 mr-1" fill="currentColor" viewBox="0 0 20 20">
